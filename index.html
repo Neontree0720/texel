@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' https://piston-meta.mojang.com https://piston-data.mojang.com; worker-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+<meta name="description" content="마인크래프트 리소스팩을 브라우저에서 바로 만드는 편집기">
+<link rel="icon" href="icon.png">
+<title>Texel</title>
+<link rel="stylesheet" href="styles.css?v=1.0.0-mw954bnq">
+</head>
+<body>
+<div id="app">
+  <header id="topbar">
+    <div class="brand"><img id="logo" src="icon.png" alt=""><span><b>Texel</b></span></div>
+    <div class="proj-info">
+      <span id="proj-name">프로젝트 없음</span>
+      <span class="badge" id="ver-badge"></span>
+      <span class="dirty-flag" id="dirty-flag" title="저장하지 않은 변경사항">●</span>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn" id="btn-save" title="모든 변경사항 저장 (Ctrl+S)">저장</button>
+    <button class="btn" id="btn-export" title="리소스팩을 .zip 파일로 내보내기">.zip 내보내기</button>
+    <button class="btn primary" id="btn-install" title=".minecraft/resourcepacks 폴더에 바로 넣기">마인크래프트에 적용</button>
+    <button class="btn ghost" id="btn-folder" title="프로젝트 폴더 열기">폴더</button>
+    <button class="btn ghost" id="btn-home" title="프로젝트 선택 화면">프로젝트</button>
+    <button class="icon-btn" id="btn-settings" title="설정"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+  </header>
+
+  <div id="main">
+    <nav id="sidenav">
+      <button data-tab="textures" class="active" title="텍스처"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>텍스처</span></button>
+      <button data-tab="lang" title="텍스트 / 번역"><svg viewBox="0 0 24 24"><path d="M4 6h10M9 4v2M6 6c0 4 3 7 7 8M12 6c0 4-3 7-7 8M14 20l4-10 4 10M15.5 17h5"/></svg><span>텍스트</span></button>
+      <button data-tab="sounds" title="사운드"><svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9c1.5 1.5 1.5 4.5 0 6M18.5 6.5c3 3 3 8 0 11"/></svg><span>사운드</span></button>
+      <button data-tab="files" title="모델 / JSON / 기타 파일"><svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12l-2 2 2 2M15 12l2 2-2 2"/></svg><span>파일</span></button>
+      <button data-tab="pack" title="팩 설정"><svg viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/></svg><span>팩 설정</span></button>
+    </nav>
+
+    <!-- ===================== TEXTURES ===================== -->
+    <section class="tab active" id="tab-textures">
+      <aside id="tex-browser" class="panel">
+        <div class="panel-head">
+          <input type="search" id="tex-search" placeholder="텍스처 검색 (예: diamond)">
+        </div>
+        <div class="tex-filters">
+          <select id="tex-cat"></select>
+          <label class="chk"><input type="checkbox" id="tex-modified"> 수정한 것만</label>
+        </div>
+        <div class="tex-count" id="tex-count"></div>
+        <div id="tex-grid"></div>
+      </aside>
+
+      <div id="editor-area">
+        <div id="doc-tabs"></div>
+        <div id="tool-options">
+          <div class="opt" id="opt-size"><span>붓 크기</span><input type="range" id="brush-size" min="1" max="16" value="1"><b id="brush-size-val">1</b></div>
+          <div class="opt" id="opt-fill"><label class="chk"><input type="checkbox" id="shape-fill"> 채우기</label></div>
+          <div class="opt" id="opt-shade"><select id="shade-mode"><option value="lighten">밝게</option><option value="darken">어둡게</option></select><input type="range" id="shade-amt" min="3" max="50" value="12"></div>
+          <div class="opt" id="opt-global"><label class="chk" title="같은 색을 텍스처 전체에서 바꿉니다"><input type="checkbox" id="fill-global"> 같은 색 전부</label></div>
+          <div class="sep"></div>
+          <label class="chk" title="좌우 대칭으로 그리기"><input type="checkbox" id="mirror-x"> 좌우 대칭</label>
+          <label class="chk" title="상하 대칭으로 그리기"><input type="checkbox" id="mirror-y"> 상하 대칭</label>
+          <label class="chk"><input type="checkbox" id="show-grid" checked> 격자</label>
+          <div class="spacer"></div>
+          <button class="icon-btn" id="btn-undo" title="실행 취소 (Ctrl+Z)"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
+          <button class="icon-btn" id="btn-redo" title="다시 실행 (Ctrl+Y)"><svg viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg></button>
+          <div class="sep"></div>
+          <button class="icon-btn" id="btn-zoom-out" title="축소 (-)">−</button>
+          <span id="zoom-val" class="zoom-val">100%</span>
+          <button class="icon-btn" id="btn-zoom-in" title="확대 (+)">+</button>
+          <button class="icon-btn" id="btn-zoom-fit" title="화면에 맞추기 (0)"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg></button>
+        </div>
+        <div id="frame-bar" class="hidden">
+          <b class="fb-title">애니메이션</b>
+          <button class="icon-btn" id="fr-prev" title="이전 프레임 (,)">‹</button>
+          <span id="fr-label">1 / 1</span>
+          <button class="icon-btn" id="fr-next" title="다음 프레임 (.)">›</button>
+          <div class="sep"></div>
+          <button class="btn sm" id="fr-dup" title="현재 프레임을 복사해서 바로 뒤에 추가">프레임 복제</button>
+          <button class="btn sm danger" id="fr-del">프레임 삭제</button>
+          <div class="sep"></div>
+          <label class="chk"><input type="checkbox" id="fr-onion"> 이전 프레임 겹쳐보기</label>
+          <label class="chk"><input type="checkbox" id="fr-all"> 전체 프레임 보기</label>
+          <div class="sep"></div>
+          <span class="dim" title="1틱 = 0.05초 (20틱 = 1초)">속도</span><input type="number" id="fr-time" min="1" max="1000" value="2" title="한 프레임이 보이는 시간 (1틱 = 0.05초)"><span class="dim">틱</span>
+        </div>
+        <div id="editor-body">
+          <div id="toolbar"></div>
+          <div id="canvas-wrap">
+            <div class="pane" id="orig-pane"><canvas id="orig-view"></canvas><div class="pane-label">원본 · 클릭하면 색을 가져와요 (우클릭: 보조 색)</div></div>
+            <div class="pane" id="main-pane"><canvas id="view"></canvas><div class="pane-label">현재 텍스처</div></div>
+            <div id="editor-empty">
+              <div class="empty-art"></div>
+              <h2>텍스처를 선택하세요</h2>
+              <p>왼쪽 목록에서 바꾸고 싶은 텍스처를 클릭하면 여기서 편집할 수 있어요.</p>
+              <p class="dim">마우스 휠: 확대/축소 · 가운데 버튼/스페이스+드래그: 이동 · 우클릭: 보조 색으로 그리기</p>
+            </div>
+          </div>
+        </div>
+        <div id="statusbar">
+          <span id="st-pos">–</span>
+          <span id="st-color"><i id="st-swatch"></i><b id="st-hex">–</b></span>
+          <span id="st-size">–</span>
+          <span id="st-sel"></span>
+          <span id="st-hint"></span>
+          <div class="spacer"></div>
+          <span id="st-path" class="dim"></span>
+        </div>
+      </div>
+
+      <aside id="tool-panel" class="panel">
+        <div class="pp-section">
+          <div class="pp-title">색상</div>
+          <div class="color-row">
+            <div class="swatches">
+              <div class="sw sw-primary" id="sw-primary" title="주 색 (좌클릭)"></div>
+              <div class="sw sw-secondary" id="sw-secondary" title="보조 색 (우클릭) - 클릭하면 바꾸기 (X)"></div>
+            </div>
+            <div class="hex-wrap"><span>#</span><input id="hex-input" maxlength="8" spellcheck="false"></div>
+          </div>
+          <canvas id="sv-canvas" width="232" height="140"></canvas>
+          <canvas id="hue-canvas" width="232" height="14"></canvas>
+          <canvas id="alpha-canvas" width="232" height="14"></canvas>
+        </div>
+        <div class="rp-tabs" id="rp-tabs">
+          <button data-rp="edit" class="active">편집</button>
+          <button data-rp="palettes">팔레트 <span class="rp-count" id="palette-count"></span></button>
+          <button data-rp="pins">고정 <span class="rp-count" id="pin-count"></span></button>
+        </div>
+        <div class="rp-page" id="rp-edit">
+        <div class="pp-section">
+          <div class="pp-title">이 텍스처의 색 <span class="dim" id="pal-count"></span></div>
+          <div class="palette" id="pal-doc"></div>
+          <div class="pp-title sm">최근 사용한 색</div>
+          <div class="palette" id="pal-recent"></div>
+        </div>
+        <div class="pp-section" id="layer-section">
+          <div class="pp-title">레이어 <span class="dim small">저장하면 합쳐진 그림이 팩에 들어가요</span></div>
+          <div id="layer-list"></div>
+          <div class="slider layer-op-row"><span>불투명도</span><input type="range" id="layer-opacity" min="0" max="100" value="100"><b id="layer-opacity-val">100%</b></div>
+          <div id="layer-actions">
+            <button class="btn sm" data-l="add" title="선택한 레이어 위에 빈 레이어 추가">＋ 새 레이어</button>
+            <button class="btn sm" data-l="dup" title="선택한 레이어 복제">복제</button>
+            <button class="btn sm icon-only" data-l="up" title="한 칸 위로">▲</button>
+            <button class="btn sm icon-only" data-l="down" title="한 칸 아래로">▼</button>
+            <button class="btn sm" data-l="merge" title="선택한 레이어를 바로 아래 레이어와 합치기">아래로 합치기</button>
+            <button class="btn sm" data-l="flatten" title="모든 레이어를 한 장으로 합치기">모두 합치기</button>
+            <button class="btn sm danger" data-l="del" title="선택한 레이어 삭제">삭제</button>
+          </div>
+        </div>
+        <div class="pp-section">
+          <div class="pp-title">미리보기 <span class="dim" id="anim-info"></span>
+            <label class="chk right"><input type="checkbox" id="prev-tile"> 타일</label></div>
+          <div class="preview-box"><canvas id="preview" width="232" height="140"></canvas></div>
+        </div>
+        <div class="pp-section">
+          <div class="pp-title">변형 · 조정</div>
+          <div class="btn-grid">
+            <button class="btn sm" data-act="flipH">좌우 뒤집기</button>
+            <button class="btn sm" data-act="flipV">상하 뒤집기</button>
+            <button class="btn sm" data-act="rotate">90° 회전</button>
+            <button class="btn sm" data-act="hsb">색조/밝기…</button>
+            <button class="btn sm" data-act="gray">흑백</button>
+            <button class="btn sm" data-act="invert">색 반전</button>
+            <button class="btn sm" data-act="resize">크기 변경…</button>
+            <button class="btn sm" data-act="clear">전부 지우기</button>
+            <button class="btn sm" data-act="addFrame" title="이 텍스처를 움직이는 애니메이션 텍스처로 만들거나 프레임을 추가합니다">애니메이션 프레임 추가</button>
+            <button class="btn sm" data-act="tint">색 입히기…</button>
+          </div>
+        </div>
+        <div class="pp-section">
+          <div class="pp-title">파일</div>
+          <div class="btn-grid">
+            <button class="btn sm" data-act="import">PNG 가져오기</button>
+            <button class="btn sm" data-act="exportPng">PNG로 저장</button>
+            <button class="btn sm" data-act="compare" title="누르고 있는 동안 원본 표시">원본 비교 (누르기)</button>
+            <button class="btn sm danger" data-act="revert">원본으로 되돌리기</button>
+          </div>
+        </div>
+        </div>
+        <!-- 팔레트: 모든 프로젝트에서 같이 쓰는 저장 팔레트 -->
+        <div class="rp-page hidden" id="rp-palettes">
+          <div class="pp-section">
+            <div class="btn-grid">
+              <button class="btn sm primary" id="pal-from-doc" title="지금 편집 중인 텍스처에 쓰인 색으로 팔레트를 만들어요">이 텍스처 색 저장</button>
+              <button class="btn sm" id="pal-new">빈 팔레트</button>
+            </div>
+            <p class="rp-hint">색 클릭: 주 색 · 우클릭: 보조 색 · Ctrl+클릭: 팔레트에서 빼기<br>팔레트는 모든 리소스팩에서 같이 쓸 수 있어요.</p>
+          </div>
+          <div id="saved-palettes"></div>
+        </div>
+        <!-- 고정: 다른 텍스처를 옆에 펼쳐 두고 보기 -->
+        <div class="rp-page hidden" id="rp-pins">
+          <div class="pp-section">
+            <button class="btn sm primary wide" id="pin-current">지금 텍스처 고정하기</button>
+            <p class="rp-hint">왼쪽 텍스처 목록에서 <b>우클릭</b>해도 고정돼요.<br>고정한 그림을 클릭하면 그 색을 가져와요 (우클릭: 보조 색).</p>
+          </div>
+          <div id="pin-list"></div>
+        </div>
+      </aside>
+    </section>
+
+    <!-- ===================== LANG ===================== -->
+    <section class="tab" id="tab-lang">
+      <div class="page">
+        <div class="page-head">
+          <div>
+            <h1>텍스트 · 번역 편집</h1>
+            <p class="dim">아이템 이름, 메뉴 글자, 버튼, 메시지 등 게임 안의 모든 글자를 바꿀 수 있어요. 바꾼 항목만 저장되고, 나머지는 원래 번역이 그대로 쓰입니다.</p>
+          </div>
+        </div>
+        <div class="toolrow">
+          <select id="lang-select"></select>
+          <input type="search" id="lang-search" placeholder="키, 원래 글자, 바꾼 글자 검색">
+          <select id="lang-cat"></select>
+          <label class="chk"><input type="checkbox" id="lang-modified"> 바꾼 것만</label>
+          <div class="spacer"></div>
+          <button class="btn" id="lang-replace">찾아 바꾸기…</button>
+          <button class="btn" id="lang-codes" title="입력칸에 색상 코드를 넣습니다">§ 색상 코드</button>
+        </div>
+        <div class="mc-live">
+          <span class="dim">게임 미리보기</span>
+          <div class="mc-tooltip" id="lang-preview"><span class="ph">바꿀 글자 입력칸을 클릭하면 게임에서 보이는 모습이 여기 나와요</span></div>
+        </div>
+        <div class="lang-header"><span>키</span><span>원래 글자</span><span>바꿀 글자</span></div>
+        <div id="lang-list" class="list-box"></div>
+        <div class="list-foot" id="lang-foot"></div>
+      </div>
+    </section>
+
+    <!-- ===================== SOUNDS ===================== -->
+    <section class="tab" id="tab-sounds">
+      <div class="page">
+        <div class="page-head">
+          <div>
+            <h1>사운드 교체</h1>
+            <p class="dim">원래 소리를 들어보고, 원하는 <b>.ogg</b> 파일로 바꿀 수 있어요. (mp3/wav는 .ogg로 변환해서 넣어주세요)</p>
+          </div>
+        </div>
+        <div class="toolrow">
+          <input type="search" id="snd-search" placeholder="사운드 검색 (예: creeper, step, door)">
+          <select id="snd-cat"></select>
+          <label class="chk"><input type="checkbox" id="snd-modified"> 바꾼 것만</label>
+          <div class="spacer"></div>
+          <label class="vol">볼륨 <input type="range" id="snd-vol" min="0" max="100" value="60"></label>
+        </div>
+        <div id="snd-list" class="list-box"></div>
+        <div class="list-foot" id="snd-foot"></div>
+      </div>
+    </section>
+
+    <!-- ===================== FILES ===================== -->
+    <section class="tab" id="tab-files">
+      <aside class="panel" id="file-browser">
+        <div class="panel-head"><input type="search" id="file-search" placeholder="파일 검색"></div>
+        <div class="tex-filters"><select id="file-cat"></select><label class="chk"><input type="checkbox" id="file-modified"> 수정한 것만</label></div>
+        <div class="quick" id="file-quick"></div>
+        <div id="file-list" class="list-box"></div>
+      </aside>
+      <div id="file-editor">
+        <div class="file-head">
+          <div><b id="file-name">파일을 선택하세요</b> <span class="dim" id="file-path"></span></div>
+          <div class="spacer"></div>
+          <span id="file-status" class="dim"></span>
+          <button class="btn sm" id="file-format">JSON 정리</button>
+          <button class="btn sm danger" id="file-revert">원본으로</button>
+          <button class="btn sm primary" id="file-save">파일 저장</button>
+        </div>
+        <textarea id="file-text" spellcheck="false" disabled placeholder="모델(JSON), 블록 상태, 스플래시 문구(texts/splashes.txt), 글꼴 설정, 셰이더 등을 직접 편집할 수 있습니다."></textarea>
+      </div>
+    </section>
+
+    <!-- ===================== PACK ===================== -->
+    <section class="tab" id="tab-pack">
+      <div class="page narrow">
+        <div class="page-head"><div><h1>팩 설정</h1><p class="dim">리소스팩 이름, 설명, 아이콘, 대상 마인크래프트 버전을 정합니다.</p></div></div>
+        <div class="pack-grid">
+          <div class="pack-icon">
+            <div class="icon-frame"><img id="pack-icon" alt=""></div>
+            <button class="btn sm" id="pack-icon-edit">아이콘 편집</button>
+            <button class="btn sm" id="pack-icon-import">이미지 가져오기</button>
+          </div>
+          <div class="form">
+            <label>팩 이름<input id="pack-name"></label>
+            <label><span>설명 <span class="dim">(§ 색상 코드 사용 가능 · 위의 "텍스트" 탭 색상 코드 버튼 참고)</span></span><textarea id="pack-desc" rows="2"></textarea></label>
+            <div class="mc-preview">
+              <div class="mc-prev-icon"><img id="pack-icon2" alt=""></div>
+              <div><div class="mc-prev-name" id="pack-prev-name"></div><div class="mc-prev-desc" id="pack-prev-desc"></div></div>
+            </div>
+            <label>마인크래프트 버전
+              <div class="row"><select id="pack-version"></select><label class="chk"><input type="checkbox" id="pack-snap"> 스냅샷</label></div>
+            </label>
+            <div class="info-line">pack_format: <b id="pack-format"></b> <span class="dim">(버전에 맞게 자동 설정)</span></div>
+            <div class="row"><button class="btn primary" id="pack-save">설정 저장</button></div>
+          </div>
+        </div>
+        <h3>통계</h3>
+        <div class="stats" id="pack-stats"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===================== WELCOME ===================== -->
+  <div id="welcome" class="overlay">
+    <div class="welcome-card">
+      <div class="welcome-hero">
+        <img id="hero-logo" src="icon.png" alt="">
+        <div><h1>Texel</h1><p>마인크래프트 리소스팩을 쉽고 빠르게 만들어 보세요</p></div>
+      </div>
+      <div class="welcome-cols">
+        <div class="wcol">
+          <h2>새 리소스팩 만들기</h2>
+          <label>이름<input id="new-name" value="나의 리소스팩"></label>
+          <label>설명<input id="new-desc" value="Texel로 만든 리소스팩"></label>
+          <label>마인크래프트 버전
+            <div class="row"><select id="new-version"><option>불러오는 중…</option></select><label class="chk"><input type="checkbox" id="new-snap"> 스냅샷</label></div>
+          </label>
+          <label>저장 위치
+            <div class="row"><input id="new-parent" readonly><button class="btn sm" id="new-parent-btn">변경</button></div>
+          </label>
+          <p class="dim small" id="ver-note"></p>
+          <button class="btn primary big" id="new-create">만들기</button>
+        </div>
+        <div class="wcol">
+          <h2>최근 프로젝트</h2>
+          <div id="recent-list"></div>
+          <div class="row">
+            <button class="btn" id="open-folder">폴더 열기…</button>
+            <button class="btn" id="open-zip">.zip 리소스팩 가져오기…</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-root"></div>
+  <div id="progress" class="hidden"><div class="prog-card"><div id="prog-text"></div><div class="prog-bar"><i id="prog-fill"></i></div></div></div>
+  <div id="toasts"></div>
+</div>
+<script src="js/jszip.min.js"></script>
+<script src="js/web-api.js?v=1.0.0-mw954bnq"></script>
+<script src="js/util.js?v=1.0.0-mw954bnq"></script>
+<script src="js/mcfont.js?v=1.0.0-mw954bnq"></script>
+<script src="js/editor.js?v=1.0.0-mw954bnq"></script>
+<script src="js/colorpicker.js?v=1.0.0-mw954bnq"></script>
+<script src="js/layers.js?v=1.0.0-mw954bnq"></script>
+<script src="js/refs.js?v=1.0.0-mw954bnq"></script>
+<script src="js/textures.js?v=1.0.0-mw954bnq"></script>
+<script src="js/lang.js?v=1.0.0-mw954bnq"></script>
+<script src="js/sounds.js?v=1.0.0-mw954bnq"></script>
+<script src="js/files.js?v=1.0.0-mw954bnq"></script>
+<script src="js/pack.js?v=1.0.0-mw954bnq"></script>
+<script src="js/app.js?v=1.0.0-mw954bnq"></script>
+</body>
+</html>

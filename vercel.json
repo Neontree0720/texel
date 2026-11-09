@@ -1,0 +1,9 @@
+{
+  "framework": null,
+  "rewrites": [
+    { "source": "/mcres/:path*", "destination": "https://resources.download.minecraft.net/:path*" }
+  ],
+  "headers": [
+    { "source": "/sw.js", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
+  ]
+}
